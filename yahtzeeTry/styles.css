@@ -1,5 +1,8 @@
 .dice{
-    display: flex;
+    /* display: flex; */
     color: red;
 }
 
+.dice.lock {
+    color: blue !important;
+}

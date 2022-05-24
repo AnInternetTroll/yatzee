@@ -11,71 +11,63 @@
       <table class="scoretables">
         <tr>
           <td>Enere</td>
-          <td id="score-1"></td>
-          <td class="rolled-score"></td>
+          <td class="rolled-score" data-objective="checkOnes"></td>
         </tr>
         <tr>
           <td>Toere</td>
-          <td id="score-2"></td>
-          <td class="rolled-score"></td>
+          <td class="rolled-score" data-objective="checkTwos"></td>
         </tr>
 
         <tr>
           <td>Treere</td>
-          <td id="score-3"></td>
-          <td class="rolled-score"></td>
+          <td class="rolled-score" data-objective="checkThrees"></td>
         </tr>
 
         <tr>
           <td>Firere</td>
-          <td id="score-4"></td>
-          <td class="rolled-score"></td>
+          <td class="rolled-score" data-objective="checkFours"></td>
         </tr>
 
         <tr>
           <td>Femmere</td>
-          <td id="score-5"></td>
-          <td class="rolled-score"></td>
+          <td class="rolled-score" data-objective="checkFives"></td>
         </tr>
 
         <tr>
           <td>Seksere</td>
-          <td id="score-6"></td>
-          <td class="rolled-score"></td>
+          <td class="rolled-score" data-objective="checkSixes"></td>
         </tr>
 
         <tr>
           <td>3 av den samme</td>
-          <td id="score-7"></td>
-          <td class="rolled-score"></td>
+          <td class="rolled-score" data-objective="checkThreeRepeats"></td>
         </tr>
 
         <tr>
           <td>4 av den samme</td>
-          <td id="score-8"></td>
-          <td class="rolled-score"></td>
+          <td class="rolled-score" data-objective="checkFourRepeats"></td>
         </tr>
 
         <tr>
           <td>Yahtzee</td>
-          <td id="score-9"></td>
-          <td class="rolled-score"></td>
+          <td class="rolled-score" data-objective="checkYahtzee"></td>
         </tr>
 
         <tr>
           <td></td>
-          <td id="Total"></td>
-          <td class="rolled-score"></td>
+          <td class="rolled-score" id="total"></td>
         </tr>
 
           <div class ="dices">
              
           </div>
 
-        <button id="rollDiceButton">ROLL THE DICE </button>
+       
         </button>
       </table>
-      <script type="module" src="game.js"></script>
+      <button id="rollDiceButton">ROLL THE DICE </button>
+      <button id="nextRound">Next Round</button>
+      <button id="restartGame"> Start New Game</button>
       <script type="module" src="index.js"></script>
     </div>
   </body>
