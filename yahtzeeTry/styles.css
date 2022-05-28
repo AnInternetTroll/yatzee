@@ -1,3 +1,5 @@
+
+
 .dice {
   /* display: flex; */
   color: red;
@@ -123,4 +125,14 @@
   font-size: 16px;
   margin: 4px 2px;
   cursor: pointer;
+}
+
+.current-round-presenter{
+  display: flex;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid;
+  background-color: gray;
+  margin: 10px;
+  color:rgb(2, 2, 2);
 }

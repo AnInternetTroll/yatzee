@@ -2,6 +2,10 @@ export class Dice {
   locked;
   value;
 
+  /**
+   * A constructor to make a new dice or re-make one from a json object
+   * @param {{value?: number; locked?: number;}?} dice An object that represents a dice, usually from `this.toJSON()`
+   */
   constructor({ value = Dice.getRandomDiceRoll(), locked = false } = {}) {
     this.value = value;
     this.locked = locked;
@@ -11,10 +15,17 @@ export class Dice {
     this.value = Dice.getRandomDiceRoll();
   }
 
+  /**
+   * Helper function to get a dice roll
+   * To be easy to change in case there's a need for a d20 or something
+   */
   static getRandomDiceRoll() {
     return Math.ceil(Math.random() * 6);
   }
 
+  /**
+   * Export a dice
+   */
   toJSON() {
     return {
       value: this.value,
@@ -29,6 +40,10 @@ class Objective {
   locked;
   points;
 
+  /**
+   * A constructor to make a new objective or re-make one from a json object
+   * @param {{value?: number; locked?: number;}?} objective An object that represents a objective, usually from `this.toJSON()`
+   */
   constructor({ name, display, locked = false, points = 0 } = {}) {
     this.name = name;
     this.locked = locked;
@@ -36,11 +51,15 @@ class Objective {
     this.display = display;
   }
 
+  /**
+   * Export an objective
+   */
   toJSON() {
     return {
       name: this.name,
       locked: this.locked,
       points: this.points,
+      display: this.display,
     };
   }
 }
@@ -52,6 +71,7 @@ export class Game {
   diceRolled;
   dice;
   objectives;
+  // Score is private so we can have a onScoreUpdate hook
   #score;
 
   /**
@@ -73,9 +93,12 @@ export class Game {
     if (dice && Array.isArray(dice) && dice.length) {
       if (typeof dice.roll === "function") this.dice = dice;
       else this.dice = dice.map((dice) => new Dice(dice));    } else {
-      this.newDice();
+      this.#newDice();
     }
 
+    // If the recived `objectives` is what we expect then use it
+    // Otherwise make our own
+    // This is used to re-make a game from a previous state
     if (objectives && Array.isArray(objectives) && objectives.length) {
       this.objectives = objectives.map((objective) => new Objective(objective));
     } else {
@@ -86,9 +109,9 @@ export class Game {
         new Objective({ name: "checkFours", display: "Firere" }),
         new Objective({ name: "checkFives", display: "Femere" }),
         new Objective({ name: "checkSixes", display: "Seksere"}),
-        new Objective({ name: "checkThreeRepeats", display: "4 like" }),
-        new Objective({ name: "checkFourRepeats", display : "5 like"}),
-        new Objective({ name: "checkYahtzee", display : "Yahtzee"}),,
+        new Objective({ name: "checkThreeRepeats", display:"3 like" }),
+        new Objective({ name: "checkFourRepeats", display :"4 like"}),
+        new Objective({ name: "checkYahtzee", display : "Yahtzee" }),
       ];
     }
 
@@ -98,6 +121,7 @@ export class Game {
     this.maxRolls = maxRolls || 3;
     this.diceRolled = diceRolled || 0;
     this.#score = score || 0;
+    // Technically the score has been updated 
     this.onScoreUpdate();
   }
 
@@ -113,6 +137,7 @@ export class Game {
       diceRolled: this.diceRolled,
       dice: this.dice,
       score: this.score,
+      objectives: this.objectives
     };
   }
 
@@ -121,8 +146,18 @@ export class Game {
    * Can be used to implement render logic
    */
   onDiceRoll() {}
+  /**
+   * A hook called on each round
+   * Can be used to implement render logic
+   */
+  onRound() {}
+  /**
+   * A hook called on each score update
+   * Can be used to implement render logic
+   */
   onScoreUpdate() {}
 
+  // AirBNB can go suck it https://github.com/airbnb/javascript#accessors
   set score(value) {
     this.#score = value;
     this.onScoreUpdate();
@@ -132,6 +167,9 @@ export class Game {
     return this.#score;
   }
 
+  /**
+   * Call this to go to the next round
+   */
   round() {
     if (this.rounds == 0) {
       return; //End game
@@ -140,9 +178,14 @@ export class Game {
     this.throwDice();
     this.rounds--;
     this.maxRolls = 3;
+    this.diceRolled = 0;
+    this.onRound()
   }
 
-  newDice() {
+  /**
+   * A helper function to generate 6 dice (die?)
+   */
+  #newDice() {
     if (!this.dice) this.dice = [];
     for (let i = 0; i < 5; ++i) {
       this.dice.push(new Dice());
@@ -159,12 +202,15 @@ export class Game {
   }
 
   throwDice() {
-    if (!this.dice.length) return this.newDice();
+    // If no dice (die?) exist then generate new ones
+    if (!this.dice.length) return this.#newDice();
 
     if (this.diceRolled == this.maxRolls) {
       return; // cant throw the dice anymore
     } else {
+      // Roll each dice
       for (let i = 0; i < this.dice.length; i++) {
+        // If the dice is locked then go to the next dice
         if (this.dice[i].locked) continue;
         this.dice[i].roll();
       }
@@ -185,9 +231,12 @@ export class Game {
    * ```
    */
   #checkN(n) {
-    return (this.duplicatesCount(this.dice)[n] || 0) * n;
+    return (this.#duplicatesCount(this.dice)[n] || 0) * n;
   }
 
+  // Objective rules
+  // Used because you can't json-fy a function
+  // (safely)
   checkOnes() {
     return this.#checkN(1);
   }
@@ -224,7 +273,7 @@ export class Game {
    * }
    * ```
    */
-  duplicatesCount(dice) {
+  #duplicatesCount(dice) {
     const counts = {};
 
     for (const arr of dice) {
@@ -234,7 +283,12 @@ export class Game {
     return counts;
   }
 
-  addUpAllDice() {
+  /**
+   * Gets the sum of all dice (die?)
+   * Used for rules that return the sum of all dice (die?)
+   * Such as checkThreeRepeats and checkFourRepeats
+   */
+  #addUpAllDice() {
     let sum = 0;
     for (let i = 0, len = this.dice.length; i < len; ++i) {
       sum += this.dice[i].value;
@@ -243,19 +297,25 @@ export class Game {
   }
 
   checkThreeRepeats() {
-    const duplicateCount = this.duplicatesCount(this.dice);
+    const duplicateCount = this.#duplicatesCount(this.dice);
     const repeats = Object.entries(duplicateCount).find((dice) => dice[1] >= 3);
-    if (repeats) return this.addUpAllDice();
+    if (repeats) return this.#addUpAllDice();
+    else return 0;
   }
   checkFourRepeats() {
-    const duplicateCount = this.duplicatesCount(this.dice);
+    const duplicateCount = this.#duplicatesCount(this.dice);
     const repeats = Object.entries(duplicateCount).find((dice) => dice[1] >= 4);
-    if (repeats) return this.addUpAllDice();
+    if (repeats) return this.#addUpAllDice();
+    else return 0;
   }
 
+  /**
+   * If all dice (die?) are the same then give 50 points
+   */
   checkYahtzee() {
-    const duplicateCount = this.duplicatesCount(this.dice);
+    const duplicateCount = this.#duplicatesCount(this.dice);
     const repeats = Object.entries(duplicateCount).find((dice) => dice[1] >= 5);
     if (repeats) return 50;
+    else return 0;
   }
 }
