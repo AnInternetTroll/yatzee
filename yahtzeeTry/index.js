@@ -65,35 +65,50 @@ function renderDice() {
 
 function renderRoundTables() {
   scoreTablesContainer.innerHTML = "";
+  scoreTablesContainer.innerHTML += `
+    <tr> 
+      <th> Type </th> 
+      <th> Score </th>
+    </tr>
+  `
+
   game.objectives.forEach((objective) => {
     scoreTablesContainer.innerHTML += `
     <tr>
           <td>${objective.display}</td>
-          <td>
+          <td class="score-button">
           <button 
             class="rolled-score" 
             data-objective="${objective.name}"
             data-locked="${objective.locked}"
           >
-              ${objective.locked ? objective.points : game[objective.name]() || 0}
+              ${
+                objective.locked
+                  ? objective.points
+                  : game[objective.name]() || 0
+              }
           </button>
           </td>
         </tr>
         `;
-  });
+       });
   requestAnimationFrame(() => {
-    const objectivesElements = document.querySelectorAll("button[data-objective]")
-    console.debug(objectivesElements);
+    const objectivesElements = document.querySelectorAll(
+      "button[data-objective]"
+    );
     objectivesElements.forEach((objectiveEl) => {
       objectiveEl.addEventListener("click", (e) => {
         if (e.currentTarget.dataset.locked === "true") return;
         const objectiveName = e.currentTarget.dataset.objective;
-        const objectiveIndex = game.objectives.findIndex((objective) => objective.name === objectiveName);
+        const objectiveIndex = game.objectives.findIndex(
+          (objective) => objective.name === objectiveName
+        );
         const earnedScore = game[objectiveName]();
         game.score += earnedScore;
         game.objectives[objectiveIndex].points = earnedScore;
         game.objectives[objectiveIndex].locked = true;
         e.currentTarget.dataset.locked = true;
+        objectiveEl.classList.add("locked-objective");
       });
     });
   });
