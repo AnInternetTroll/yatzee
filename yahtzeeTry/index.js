@@ -1,6 +1,8 @@
 // importere klasse fra game.js
 import { Game } from "./game.js";
 
+
+
 class Player {
   /** @type {string} */
   name;
@@ -44,7 +46,9 @@ const nextRoundButton = document.querySelector("#nextRound");
 const currentRoundEl = document.querySelector(".current-round");
 const finalScoreEl = document.querySelector("#finalScore");
 
+
 const previousGame = localStorage.getItem("previousGame");
+
 
 //current round blir brukt til å vise fram hvilket runde mann er i
 let currentRound = 1;
@@ -156,11 +160,12 @@ function renderDice() {
   players[currentPlayer].game.dice.forEach((dice, index) => {
     // hver knapp for en dataset med sin index
     dicesContainer.innerHTML += `
-        <button 
+        <img 
           class="dice ${dice.locked ? "lock" : ""}" 
           data-index="${index}"
           data-player="${currentPlayer}"
-        >${dice.value}</button>
+          src="tall${dice.value}.png"
+        ></img>
     `;
   });
 
@@ -247,16 +252,17 @@ function renderRoundTables() {
   });
   scoreTablesContainer.innerHTML += `
        <tr>
-       <td>Total</td>
+       <td class="td">Total</td>
        ${players
          .map(
            (player) => `
-          <td>${player.game.score}</td>
+          <td id="td-content">${player.game.score}</td>
        `
          )
          .join("")}
        </tr>
        `;
+    
 
   /**
    * Denne funksjonen låser objectives, lagrer og oppdaterer verdiene.

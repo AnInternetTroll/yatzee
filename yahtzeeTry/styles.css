@@ -135,3 +135,23 @@
   margin: 10px;
   color: rgb(2, 2, 2);
 }
+
+
+#finalScore{
+  padding-top: 12px;
+padding-bottom: 12px;
+text-align: left;
+background-color: #555555;
+border: 1px solid #ddd;
+padding: 8px;
+}
+
+
+
+.td-content{
+  padding-top: 12px;
+  padding-bottom: 12px;
+  text-align: left;
+  background-color: #555555;
+  color: white;
+}
