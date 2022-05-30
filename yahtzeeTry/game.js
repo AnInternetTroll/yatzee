@@ -1,5 +1,7 @@
 export class Dice {
+  /** @type {boolean} */
   locked;
+  /** @type {number} */
   value;
 
   /**
@@ -35,9 +37,13 @@ export class Dice {
 }
 
 class Objective {
+  /** @type {string} */
   name;
+  /** @type {string} */
   display;
+  /** @type {boolean} */
   locked;
+  /** @type {number} */
   points;
 
   /**
@@ -65,11 +71,15 @@ class Objective {
 }
 
 export class Game {
+  /** @type {number} */
   rounds;
+  /** @type {number} */
   currentRound;
   maxRolls;
   diceRolled;
+  /** @type {Dice[]} */
   dice;
+  /** @type {Objective[]} */
   objectives;
   // Score is private so we can have a onScoreUpdate hook
   #score;
@@ -92,7 +102,8 @@ export class Game {
     // Is it dice or die?
     if (dice && Array.isArray(dice) && dice.length) {
       if (typeof dice.roll === "function") this.dice = dice;
-      else this.dice = dice.map((dice) => new Dice(dice));    } else {
+      else this.dice = dice.map((dice) => new Dice(dice));
+    } else {
       this.#newDice();
     }
 
@@ -108,10 +119,10 @@ export class Game {
         new Objective({ name: "checkThrees", display: "Trere" }),
         new Objective({ name: "checkFours", display: "Firere" }),
         new Objective({ name: "checkFives", display: "Femere" }),
-        new Objective({ name: "checkSixes", display: "Seksere"}),
-        new Objective({ name: "checkThreeRepeats", display:"3 like" }),
-        new Objective({ name: "checkFourRepeats", display :"4 like"}),
-        new Objective({ name: "checkYahtzee", display : "Yahtzee" }),
+        new Objective({ name: "checkSixes", display: "Seksere" }),
+        new Objective({ name: "checkThreeRepeats", display: "3 like" }),
+        new Objective({ name: "checkFourRepeats", display: "4 like" }),
+        new Objective({ name: "checkYahtzee", display: "Yahtzee" }),
       ];
     }
 
@@ -121,7 +132,7 @@ export class Game {
     this.maxRolls = maxRolls || 3;
     this.diceRolled = diceRolled || 0;
     this.#score = score || 0;
-    // Technically the score has been updated 
+    // Technically the score has been updated
     this.onScoreUpdate();
   }
 
@@ -137,7 +148,7 @@ export class Game {
       diceRolled: this.diceRolled,
       dice: this.dice,
       score: this.score,
-      objectives: this.objectives
+      objectives: this.objectives,
     };
   }
 
@@ -179,7 +190,7 @@ export class Game {
     this.rounds--;
     this.maxRolls = 3;
     this.diceRolled = 0;
-    this.onRound()
+    this.onRound();
   }
 
   /**
