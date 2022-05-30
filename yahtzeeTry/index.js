@@ -1,6 +1,40 @@
 // importere klasse fra game.js
 import { Game } from "./game.js";
 
+class Player {
+  /** @type {string} */
+  name;
+  /** @type {Game} */
+  game;
+  /** @type {boolean} */
+  hasSelectedObjective;
+
+  /**
+   * @param {{
+   *  name: string;
+   *  game: Game;
+   * }} param0
+   */
+  constructor({
+    name = "Unknown name",
+    game = new Game(),
+    hasSelectedObjective = false,
+  }) {
+    this.name = name;
+    this.game = game instanceof Game ? game : new Game(game);
+    //Dette er for å gi en objective true eller false, vis det er false ikke gjør noe, vis det er true så kan man ikke locke på en objective lenger
+    this.hasSelectedObjective = hasSelectedObjective || false;
+  }
+
+  toJSON() {
+    return {
+      name: this.name,
+      game: this.game,
+      hasSelectedObjective: this.hasSelectedObjective,
+    };
+  }
+}
+
 // hente DOM elementer
 const rollButton = document.getElementById("rollDiceButton");
 const dicesContainer = document.querySelector(".dices");
@@ -8,24 +42,49 @@ const scoreTablesContainer = document.querySelector(".scoretables");
 const restartGame = document.querySelector("#restartGame");
 const nextRoundButton = document.querySelector("#nextRound");
 const currentRoundEl = document.querySelector(".current-round");
+const finalScoreEl = document.querySelector("#finalScore");
 
 const previousGame = localStorage.getItem("previousGame");
 
-//current round blir brukt til å vise fram hvilket runde mann er i 
-let currentRound = 0;
-//Dette er for å gi en objective true eller false, vis det er false ikke gjør noe, vis det er true så kan man ikke locke på en objective lenger
-let hasSelectedObjective = false;
+//current round blir brukt til å vise fram hvilket runde mann er i
+let currentRound = 1;
+let currentPlayer = 0;
+/** @type {Player[]} */
+const players = [];
+
+{
+  let playerCount = 0;
+  let playerName = "";
+  do {
+    playerName = prompt("Give me a name for player " + (playerCount + 1));
+    console.log(playerName, typeof playerName, playerName.length);
+    if (!playerName) {
+      if (playerCount === 0)
+        players.push(
+          new Player({
+            name: "Player 1",
+          })
+        );
+      continue;
+    }
+    players.push(
+      new Player({
+        name: playerName,
+      })
+    );
+    playerCount++;
+  } while (playerName.length && (playerCount !== 0 || playerCount == 4));
+}
 
 /**
- * event listener for å restarte spillet. 
- * Det sletter elementet med key: previousGame 
+ * event listener for å restarte spillet.
+ * Det sletter elementet med key: previousGame
  * og reloader siden for å legge til changes
  */
 restartGame.addEventListener("click", (e) => {
   localStorage.removeItem("previousGame");
   window.location.reload();
 });
-
 
 /**
  * Event listener på nextRound knappen
@@ -34,20 +93,45 @@ restartGame.addEventListener("click", (e) => {
  * Ellers skal det starte nytt runde og oppdatere hvilken runde mann er i
  */
 nextRoundButton.addEventListener("click", (e) => {
-  if (!hasSelectedObjective) {
+  if (!players[currentPlayer].hasSelectedObjective) {
     alert("No Objective Selected! Please select a objective!");
     return;
-  } else{
-    game.round();
-    currentRoundEl.textContent = currentRound
-  } 
+  } else {
+    if (currentPlayer === players.length - 1) {
+      currentRound++;
+      if (!players[currentPlayer].game.rounds) {
+        finalScoreEl.innerHTML = `
+          <tr>
+            <td> Player </th>
+            <td> Score </th>
+          </tr>
+          `;
+        players.forEach((player) => {
+          finalScoreEl.innerHTML += `
+          <tr>
+            <td> ${player.name} </td>
+            <td> ${player.game.score} </td>
+          </tr>
+          `;
+        });
+      }
+      currentPlayer = 0;
+      console.log("Current player has been reset", currentPlayer);
+    } else {
+      currentPlayer++;
+      console.log("Current player has been incremented", currentPlayer);
+    }
+    players[currentPlayer].game.round();
+    players[currentPlayer].hasSelectedObjective = false;
+    currentRoundEl.textContent = currentRound;
+  }
 });
 
 /**
  * Dette startet nytt game og sjekker om det er et game på localstorage.
  * VIss det er et game så skal den oppdatere forkjellige elementer, ellers skal den starte en runde fra scratch
  */
-const game = new Game(previousGame ? JSON.parse(previousGame) : undefined);
+//const game = new Game(previousGame ? JSON.parse(previousGame) : undefined);
 renderDice();
 
 /**
@@ -56,21 +140,12 @@ renderDice();
 rollButton.addEventListener("click", (e) => {
   e.preventDefault();
   // funksjon fra game.js
-  game.throwDice();
+  players[currentPlayer].game.throwDice();
 });
 
 /**
- * Så når terning blir kasta så skal den vise et nytt terning og lagre spillet.
- */
-game.onDiceRoll = () => {
-  renderDice();
-  saveGame();
- 
-};
-
-/**
- * Først tømmer vi diven for terningene i tilffele det er noen terninger som er lagret. 
- * Lager en forEach for å legge til en terning på spillet. 
+ * Først tømmer vi diven for terningene i tilffele det er noen terninger som er lagret.
+ * Lager en forEach for å legge til en terning på spillet.
  * Alt blir generert dynamisk, så vi legger til verdiene med template strings slik at vi kan skrive variabler inn på html
  */
 
@@ -78,12 +153,14 @@ function renderDice() {
   dicesContainer.innerHTML = "";
 
   // rendere et dynamist terning for hvert roll
-  game.dice.forEach((dice, index) => {
+  players[currentPlayer].game.dice.forEach((dice, index) => {
     // hver knapp for en dataset med sin index
     dicesContainer.innerHTML += `
-        <button class="dice ${
-          dice.locked ? "lock" : ""
-        }" data-index="${index}">${dice.value}</button>
+        <button 
+          class="dice ${dice.locked ? "lock" : ""}" 
+          data-index="${index}"
+          data-player="${currentPlayer}"
+        >${dice.value}</button>
     `;
   });
 
@@ -91,15 +168,24 @@ function renderDice() {
   const lockDice = document.querySelectorAll("[data-index]");
 
   /**
-   * Her tar vi og legger en eventListener på hver eneste terning. Og vis noen trykker på den 
+   * Her tar vi og legger en eventListener på hver eneste terning. Og vis noen trykker på den
    * så skal den gi verdien Locked til knappen som ble trykket på og den skal også gi den en klasse
    * for å kunne style den i css
    */
-
   lockDice.forEach((dice) => {
     dice.addEventListener("click", (e) => {
+      console.log(
+        "Current Player",
+        currentPlayer,
+        "Has locked the dice",
+        dice.dataset.index
+      );
       // låser en terning ved hjelp av indexen til en ternign
-      game.lockDice(dice.dataset.index);
+      players[e.currentTarget.dataset.player].game.lockDice(dice.dataset.index);
+      console.log(
+        "After lock",
+        players[e.currentTarget.dataset.player].game.dice[dice.dataset.index]
+      );
       dice.classList.add("lock");
     });
   });
@@ -115,62 +201,98 @@ function renderRoundTables() {
   scoreTablesContainer.innerHTML += `
     <tr> 
       <th> Type </th> 
-      <th> Score </th>
+      ${players
+        .map(
+          (player, playerIndex) => `
+        <th class="${playerIndex === currentPlayer ? "active" : ""}"> ${
+            player.name
+          } </th>
+      `
+        )
+        .join(" ")}
     </tr>
   `;
 
-  game.objectives.forEach((objective) => {
+  players[0].game.objectives.forEach((objective, objectiveIndex) => {
     scoreTablesContainer.innerHTML += `
     <tr>
           <td>${objective.display}</td>
-          <td class="score-button">
-          <button 
-            class="rolled-score ${objective.locked && "locked-objective"}" 
-            data-objective="${objective.name}"
-            data-locked="${objective.locked}"
-          >
-              ${
-                objective.locked
-                  ? objective.points
-                  : game[objective.name]() || 0
-              }
-          </button>
-          </td>
+          ${players
+            .map(
+              (player, playerIndex) => `
+                <td class="score-button">
+                  <button 
+                    class="rolled-score ${
+                      player.game.objectives[objectiveIndex].locked
+                        ? "locked-objective"
+                        : ""
+                    }" 
+                    data-objective="${objective.name}"
+                    data-locked="${
+                      player.game.objectives[objectiveIndex].locked
+                    }"
+                    data-player="${playerIndex}"
+                  >
+                    ${
+                      player.game.objectives[objectiveIndex].locked
+                        ? player.game.objectives[objectiveIndex].points
+                        : player.game[objective.name]() || 0
+                    }
+                  </button>
+                  </td>`
+            )
+            .join("")}
         </tr>
         `;
   });
   scoreTablesContainer.innerHTML += `
        <tr>
        <td>Total</td>
-        <td>${game.score}</td>
+       ${players
+         .map(
+           (player) => `
+          <td>${player.game.score}</td>
+       `
+         )
+         .join("")}
        </tr>
        `;
 
-       /**
-        * Denne funksjonen låser objectives, lagrer og oppdaterer verdiene.
-        * Det legger også en klasse for styling
-        */
+  /**
+   * Denne funksjonen låser objectives, lagrer og oppdaterer verdiene.
+   * Det legger også en klasse for styling
+   */
   requestAnimationFrame(() => {
     const objectivesElements = document.querySelectorAll(
-      "button[data-objective]"
+      `button[data-objective][data-player="${currentPlayer}"]`
     );
     objectivesElements.forEach((objectiveEl) => {
-      if (hasSelectedObjective) {
+      if (players[objectiveEl.dataset.player].hasSelectedObjective) {
       }
       objectiveEl.addEventListener("click", (e) => {
-        if (e.currentTarget.dataset.locked === "true" ) {
+        if (e.currentTarget.dataset.locked === "true") {
           return;
-        } if (hasSelectedObjective) return;
+        }
+        if (players[e.currentTarget.dataset.player].hasSelectedObjective)
+          return;
         else {
-          hasSelectedObjective = true;
+          players[e.currentTarget.dataset.player].hasSelectedObjective = true;
           const objectiveName = e.currentTarget.dataset.objective;
-          const objectiveIndex = game.objectives.findIndex(
+          const objectiveIndex = players[
+            e.currentTarget.dataset.player
+          ].game.objectives.findIndex(
             (objective) => objective.name === objectiveName
           );
-          const earnedScore = game[objectiveName]();
-          game.score += earnedScore;
-          game.objectives[objectiveIndex].points = earnedScore;
-          game.objectives[objectiveIndex].locked = true;
+          console.log(objectiveName);
+          const earnedScore =
+            players[e.currentTarget.dataset.player].game[objectiveName]();
+          players[e.currentTarget.dataset.player].game.score += earnedScore;
+          players[e.currentTarget.dataset.player].game.objectives[
+            objectiveIndex
+          ].points = earnedScore;
+          players[e.currentTarget.dataset.player].game.objectives[
+            objectiveIndex
+          ].locked = true;
           e.currentTarget.dataset.locked = true;
           objectiveEl.classList.add("locked-objective");
         }
@@ -182,19 +304,48 @@ function renderRoundTables() {
  * Denne funksjonen lagrer spillet på localstorage slik at vi kan få tak i den om vi reloader pagen
  */
 const saveGame = () =>
-  localStorage.setItem("previousGame", JSON.stringify(game));
+  localStorage.setItem("previousGame", JSON.stringify(players));
 
-  //Hver runde så skal den plusse til en runde og sette objectives som ikke er valgt med false
-game.onRound = () => {
-  currentRound++
-  hasSelectedObjective = false;
+//Hver runde så skal den plusse til en runde og sette objectives som ikke er valgt med false
+const onRound = (playerIndex) => {
+  console.log(
+    "Player",
+    playerIndex,
+    "Out of",
+    players.length,
+    "Current player",
+    currentPlayer,
+    "Has triggered a new round"
+  );
+  console.log(
+    currentPlayer,
+    players.length,
+    currentPlayer === players.length - 1
+  );
 };
 
 //Hver gang scoren blir oppdatert så lagrer vi  den på localstorage
-game.onScoreUpdate = () => {
+const onScoreUpdate = () => {
   saveGame();
 };
+
+/**
+ * Så når terning blir kasta så skal den vise et nytt terning og lagre spillet.
+ */
+const onDiceRoll = () => {
+  renderDice();
+  saveGame();
+};
+
+for (let i = 0; i < players.length; i++) {
+  players[i].game.onDiceRoll = onDiceRoll;
+  players[i].game.onScoreUpdate = onScoreUpdate;
+  players[i].game.onRound = () => onRound(i);
+
+  players[i].game.onScoreUpdate();
+}
+
 //Til slutt lagrer vi alt, oppdaterer score og renderer tables med nytt data
-game.round();
-game.onScoreUpdate();
+players[currentPlayer].game.round();
+currentPlayer = 0;
 renderRoundTables();
