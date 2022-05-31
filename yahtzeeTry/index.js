@@ -48,15 +48,17 @@ const finalScoreEl = document.querySelector("#finalScore");
 
 
 const previousGame = localStorage.getItem("previousGame");
+const previousGameStats = localStorage.getItem("previousGameStats")
 
 
 //current round blir brukt til å vise fram hvilket runde mann er i
 let currentRound = 1;
 let currentPlayer = 0;
-/** @type {Player[]} */
-const players = [];
 
-{
+/** @type {Player[]} */
+const players = previousGame ? JSON.parse(previousGame).map(player => new Player(player)) : [];
+
+if (!players.length) {
   let playerCount = 0;
   let playerName = "";
   do {
@@ -87,6 +89,7 @@ const players = [];
  */
 restartGame.addEventListener("click", (e) => {
   localStorage.removeItem("previousGame");
+  localStorage.removeItem("previousGameStats");
   window.location.reload();
 });
 
@@ -125,8 +128,9 @@ nextRoundButton.addEventListener("click", (e) => {
       currentPlayer++;
       console.log("Current player has been incremented", currentPlayer);
     }
-    players[currentPlayer].game.round();
     players[currentPlayer].hasSelectedObjective = false;
+    players[currentPlayer].game.round();
+    saveGame();
     currentRoundEl.textContent = currentRound;
   }
 });
@@ -305,12 +309,18 @@ function renderRoundTables() {
       });
     });
   });
+  currentRoundEl.textContent = currentRound;
 }
 /**
  * Denne funksjonen lagrer spillet på localstorage slik at vi kan få tak i den om vi reloader pagen
  */
-const saveGame = () =>
+const saveGame = () => {
   localStorage.setItem("previousGame", JSON.stringify(players));
+  localStorage.setItem("previousGameStats", JSON.stringify({
+    currentPlayer,
+    currentRound,
+  }));
+}
 
 //Hver runde så skal den plusse til en runde og sette objectives som ikke er valgt med false
 const onRound = (playerIndex) => {
@@ -323,11 +333,7 @@ const onRound = (playerIndex) => {
     currentPlayer,
     "Has triggered a new round"
   );
-  console.log(
-    currentPlayer,
-    players.length,
-    currentPlayer === players.length - 1
-  );
+  saveGame();
 };
 
 //Hver gang scoren blir oppdatert så lagrer vi  den på localstorage
@@ -351,7 +357,17 @@ for (let i = 0; i < players.length; i++) {
   players[i].game.onScoreUpdate();
 }
 
+//current round blir brukt til å vise fram hvilket runde mann er i
+try {
+  const stats = JSON.parse(previousGameStats);
+  currentPlayer = stats.currentPlayer;
+  currentRound = stats.currentRound;
+} catch(err) {
+  console.log("Probably no stats available ", err?.message || err);
+}
+
+players[currentPlayer].hasSelectedObjective = false;
 //Til slutt lagrer vi alt, oppdaterer score og renderer tables med nytt data
 players[currentPlayer].game.round();
-currentPlayer = 0;
+
 renderRoundTables();
