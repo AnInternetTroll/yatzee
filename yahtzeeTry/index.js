@@ -1,7 +1,7 @@
+/// <reference lib="dom" />
+/// <reference no-default-lib="true" />
 // importere klasse fra game.js
 import { Game } from "./game.js";
-
-
 
 class Player {
   /** @type {string} */
@@ -45,18 +45,29 @@ const restartGame = document.querySelector("#restartGame");
 const nextRoundButton = document.querySelector("#nextRound");
 const currentRoundEl = document.querySelector(".current-round");
 const finalScoreEl = document.querySelector("#finalScore");
-
+const forcedYatzeeEl = document.querySelector("#forcedYatzee");
 
 const previousGame = localStorage.getItem("previousGame");
-const previousGameStats = localStorage.getItem("previousGameStats")
-
+const previousGameStats = localStorage.getItem("previousGameStats");
 
 //current round blir brukt til å vise fram hvilket runde mann er i
 let currentRound = 1;
 let currentPlayer = 0;
+let forcedYatzee = localStorage.getItem("forcedYatzee");
 
-/** @type {Player[]} */
-const players = previousGame ? JSON.parse(previousGame).map(player => new Player(player)) : [];
+/** @type {Array.<Player>} */
+const players = previousGame
+  ? JSON.parse(previousGame).map((player) => new Player(player))
+  : [];
+
+console.log(forcedYatzee);
+if (forcedYatzee === null) {
+  forcedYatzee = true;
+} else {
+  forcedYatzee = forcedYatzee === "true";
+}
+localStorage.setItem("forcedYatzee", "true");
+forcedYatzeeEl.textContent = "Toggle forced yatzee " + !forcedYatzee;
 
 if (!players.length) {
   let playerCount = 0;
@@ -100,39 +111,47 @@ restartGame.addEventListener("click", (e) => {
  * Ellers skal det starte nytt runde og oppdatere hvilken runde mann er i
  */
 nextRoundButton.addEventListener("click", (e) => {
-  if (!players[currentPlayer].hasSelectedObjective) {
+  console.log("forcedYatzee", forcedYatzee);
+  if (forcedYatzee) {
+    const objectiveName =
+      players[currentPlayer].game.objectives[currentRound - 1].name;
+    const objectiveEl = document.querySelector(
+      `[data-objective="${objectiveName}"][data-player="${currentPlayer}"]`
+    );
+    console.log(objectiveName, objectiveEl);
+    lockObjective(objectiveEl);
+  } else if (!players[currentPlayer].hasSelectedObjective) {
     alert("No Objective Selected! Please select a objective!");
     return;
-  } else {
-    if (currentPlayer === players.length - 1) {
-      currentRound++;
-      if (!players[currentPlayer].game.rounds) {
-        finalScoreEl.innerHTML = `
+  }
+  if (currentPlayer === players.length - 1) {
+    currentRound++;
+    if (!players[currentPlayer].game.rounds) {
+      finalScoreEl.innerHTML = `
           <tr>
             <td> Player </th>
             <td> Score </th>
           </tr>
           `;
-        players.forEach((player) => {
-          finalScoreEl.innerHTML += `
+      players.forEach((player) => {
+        finalScoreEl.innerHTML += `
           <tr>
             <td> ${player.name} </td>
             <td> ${player.game.score} </td>
           </tr>
           `;
-        });
-      }
-      currentPlayer = 0;
-      console.log("Current player has been reset", currentPlayer);
-    } else {
-      currentPlayer++;
-      console.log("Current player has been incremented", currentPlayer);
+      });
     }
-    players[currentPlayer].hasSelectedObjective = false;
-    players[currentPlayer].game.round();
-    saveGame();
-    currentRoundEl.textContent = currentRound;
+    currentPlayer = 0;
+    console.log("Current player has been reset", currentPlayer);
+  } else {
+    currentPlayer++;
+    console.log("Current player has been incremented", currentPlayer);
   }
+  players[currentPlayer].hasSelectedObjective = false;
+  players[currentPlayer].game.round();
+  saveGame();
+  currentRoundEl.textContent = currentRound;
 });
 
 /**
@@ -149,6 +168,13 @@ rollButton.addEventListener("click", (e) => {
   e.preventDefault();
   // funksjon fra game.js
   players[currentPlayer].game.throwDice();
+});
+
+forcedYatzeeEl.addEventListener("click", () => {
+  forcedYatzee = !forcedYatzee;
+  localStorage.setItem("forcedYatzee", forcedYatzee);
+  forcedYatzeeEl.textContent = "Toggle forced yatzee " + !forcedYatzee;
+  renderRoundTables();
 });
 
 /**
@@ -199,6 +225,37 @@ function renderDice() {
     });
   });
   renderRoundTables();
+}
+
+/**
+ * @param {Element} objectiveEl
+ * @returns {void}
+ */
+function lockObjective(objectiveEl) {
+  if (objectiveEl.dataset.locked === "true") {
+    return;
+  }
+  if (players[objectiveEl.dataset.player].hasSelectedObjective) return;
+  else {
+    players[objectiveEl.dataset.player].hasSelectedObjective = true;
+    const objectiveName = objectiveEl.dataset.objective;
+    const objectiveIndex = players[
+      objectiveEl.dataset.player
+    ].game.objectives.findIndex(
+      (objective) => objective.name === objectiveName
+    );
+    console.log(objectiveName);
+    const earnedScore =
+      players[objectiveEl.dataset.player].game[objectiveName]();
+    players[objectiveEl.dataset.player].game.score += earnedScore;
+    players[objectiveEl.dataset.player].game.objectives[objectiveIndex].points =
+      earnedScore;
+    players[objectiveEl.dataset.player].game.objectives[
+      objectiveIndex
+    ].locked = true;
+    objectiveEl.dataset.locked = true;
+    objectiveEl.classList.add("locked-objective");
+  }
 }
 
 /**
@@ -266,7 +323,6 @@ function renderRoundTables() {
          .join("")}
        </tr>
        `;
-    
 
   /**
    * Denne funksjonen låser objectives, lagrer og oppdaterer verdiene.
@@ -277,36 +333,10 @@ function renderRoundTables() {
       `button[data-objective][data-player="${currentPlayer}"]`
     );
     objectivesElements.forEach((objectiveEl) => {
-      if (players[objectiveEl.dataset.player].hasSelectedObjective) {
-      }
-      objectiveEl.addEventListener("click", (e) => {
-        if (e.currentTarget.dataset.locked === "true") {
-          return;
-        }
-        if (players[e.currentTarget.dataset.player].hasSelectedObjective)
-          return;
-        else {
-          players[e.currentTarget.dataset.player].hasSelectedObjective = true;
-          const objectiveName = e.currentTarget.dataset.objective;
-          const objectiveIndex = players[
-            e.currentTarget.dataset.player
-          ].game.objectives.findIndex(
-            (objective) => objective.name === objectiveName
-          );
-          console.log(objectiveName);
-          const earnedScore =
-            players[e.currentTarget.dataset.player].game[objectiveName]();
-          players[e.currentTarget.dataset.player].game.score += earnedScore;
-          players[e.currentTarget.dataset.player].game.objectives[
-            objectiveIndex
-          ].points = earnedScore;
-          players[e.currentTarget.dataset.player].game.objectives[
-            objectiveIndex
-          ].locked = true;
-          e.currentTarget.dataset.locked = true;
-          objectiveEl.classList.add("locked-objective");
-        }
-      });
+      if (!forcedYatzee)
+        objectiveEl.addEventListener("click", (e) =>
+          lockObjective(e.currentTarget)
+        );
     });
   });
   currentRoundEl.textContent = currentRound;
@@ -316,11 +346,15 @@ function renderRoundTables() {
  */
 const saveGame = () => {
   localStorage.setItem("previousGame", JSON.stringify(players));
-  localStorage.setItem("previousGameStats", JSON.stringify({
-    currentPlayer,
-    currentRound,
-  }));
-}
+  localStorage.setItem(
+    "previousGameStats",
+    JSON.stringify({
+      currentPlayer,
+      currentRound,
+      forcedYatzee,
+    })
+  );
+};
 
 //Hver runde så skal den plusse til en runde og sette objectives som ikke er valgt med false
 const onRound = (playerIndex) => {
@@ -333,6 +367,7 @@ const onRound = (playerIndex) => {
     currentPlayer,
     "Has triggered a new round"
   );
+  renderRoundTables();
   saveGame();
 };
 
@@ -362,7 +397,8 @@ try {
   const stats = JSON.parse(previousGameStats);
   currentPlayer = stats.currentPlayer;
   currentRound = stats.currentRound;
-} catch(err) {
+  forcedYatzee = stats.forcedYatzee;
+} catch (err) {
   console.log("Probably no stats available ", err?.message || err);
 }
 
