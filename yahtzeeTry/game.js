@@ -114,14 +114,20 @@ export class Game {
       this.objectives = objectives.map((objective) => new Objective(objective));
     } else {
       this.objectives = [
-        new Objective({ name: "checkOnes", display: "Enere" }),
-        new Objective({ name: "checkTwos", display: "Toere" }),
-        new Objective({ name: "checkThrees", display: "Trere" }),
-        new Objective({ name: "checkFours", display: "Firere" }),
-        new Objective({ name: "checkFives", display: "Femere" }),
-        new Objective({ name: "checkSixes", display: "Seksere" }),
+        new Objective({ name: "checkOnes", display: "Ones" }),
+        new Objective({ name: "checkTwos", display: "Twos" }),
+        new Objective({ name: "checkThrees", display: "Threes" }),
+        new Objective({ name: "checkFours", display: "Fours" }),
+        new Objective({ name: "checkFives", display: "Fives" }),
+        new Objective({ name: "checkSixes", display: "Sixes" }),
+        new Objective({ name: "checkAPair", display: "A pair" }),
+        new Objective({ name: "checkTwoPairs", display: "Two Pairs" }),
         new Objective({ name: "checkThreeRepeats", display: "3 like" }),
         new Objective({ name: "checkFourRepeats", display: "4 like" }),
+        new Objective({ name: "smallStraight", display: "Small Straight" }),
+        new Objective({ name: "largeStraight", display: "Large Straight" }),
+        new Objective({ name: "house", display: "House" }),
+        new Objective({ name: "chance", display: "Chance" }),
         new Objective({ name: "checkYahtzee", display: "Yahtzee" }),
       ];
     }
@@ -328,5 +334,72 @@ export class Game {
     const repeats = Object.entries(duplicateCount).find((dice) => dice[1] >= 5);
     if (repeats) return 50;
     else return 0;
+  }
+
+  smallStraight() {
+    const arr = [1, 2, 3, 4];
+    const arr2 = [2, 3, 4, 5];
+    const arr3 = [3, 4, 5, 6];
+
+    let option1 = arr.every((val) =>
+      this.dice.map((dice) => dice.value).includes(val)
+    );
+    let option2 = arr2.every((val) =>
+      this.dice.map((dice) => dice.value).includes(val)
+    );
+    let option3 = arr3.every((val) =>
+      this.dice.map((dice) => dice.value).includes(val)
+    );
+
+    if (option1 == true || option2 == true || option3 == true) {
+      return 30;
+    }
+    return 0;
+  }
+
+  largeStraight() {
+    const arr = [1, 2, 3, 4, 5];
+    const arr2 = [2, 3, 4, 5, 6];
+
+    let option1 = arr.every((val) =>
+      this.dice.map((dice) => dice.value).includes(val)
+    );
+    let option2 = arr2.every((val) =>
+      this.dice.map((dice) => dice.value).includes(val)
+    );
+
+    if (option1 == true || option2 == true) return 40;
+
+    return 0;
+  }
+
+  checkAPair() {
+    return 0;
+  }
+  checkTwoPairs() {
+    return 0
+  }
+
+  house() {
+    const counts = {};
+
+    for (const arr of this.dice) {
+      counts[arr] = counts[arr] ? counts[arr] + 1 : 1;
+    }
+
+    const tmp = Object.values(counts);
+
+    let threeOfAKind = false,
+      twoOfAKind = false;
+    for (let i = 0, len = tmp.length; i < len; ++i) {
+      if (tmp[i] == 2) twoOfAKind = true;
+      if (tmp[i] == 3) threeOfAKind = true;
+    }
+
+    if (twoOfAKind && threeOfAKind) return 25;
+    return 0;
+  }
+  chance() {
+    return 0;
   }
 }
